@@ -1,0 +1,13 @@
+##folders
+Debug/
+Release/
+.vs/
+**/Debug/
+**/Release/
+
+##files
+**/*.i
+**/*.obj
+**/*.pb.cc
+**/*.pb.h
+~$*
