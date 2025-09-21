@@ -5,8 +5,6 @@
 
 // 네트워크 바이트 정렬(Big Endian)
 u_long network = htonl(0x12345678);
-// 호스트 바이트 정렬
-u_long host = 0x12345678;
 
 bool IsLittleEndian()
 {
