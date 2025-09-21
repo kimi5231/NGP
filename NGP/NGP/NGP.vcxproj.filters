@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="2-1.cpp">
+    <ClCompile Include="NGP.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
