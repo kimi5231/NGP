@@ -3,25 +3,25 @@
 
 #pragma comment(lib, "ws2_32")
 
-// Big Endian(네트워크 바이트)
-u_long Big = 0x12345678;
-// Little Endian
-u_long Little = 0x78563412;
+// 네트워크 바이트 정렬(Big Endian)
+u_long network = htonl(0x12345678);
+// 호스트 바이트 정렬
+u_long host = 0x12345678;
 
 bool IsLittleEndian()
 {
-	if (ntohl(Big) == Big)
+	if (ntohl(network) == network)
 		return false;
-	else if (ntohl(Big) == Little)
-		return true;
+	
+	return true;
 }
 
 bool IsBigEndian()
 {
-	if (ntohl(Big) == Big)
+	if (ntohl(network) == network)
 		return true;
-	else if (ntohl(Big) == Little)
-		return false;
+	
+	return false;
 }
 
 int main()
