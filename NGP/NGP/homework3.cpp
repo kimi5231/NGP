@@ -1,7 +1,7 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #include <iostream>
-#include <winSock2.h>
-#include <WS2tcpip.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 
 #pragma comment(lib, "ws2_32")
 
@@ -9,22 +9,26 @@ int main(int argc, char* argv[])
 {
 	// 윈속 초기화
 	WSADATA wsa;
-
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 0;
 
-	hostent* test = gethostbyname(argv[1]);
-	//hostent* test = gethostbyname("www.example.com");
-	
-	std::cout << test->h_name << std::endl;
+	hostent* host = gethostbyname(argv[1]);
 
-	sockaddr_in addr;
-	memset(&addr, 0, sizeof(addr));
-	inet_pton(test->h_addrtype, test->h_addr_list[0], &addr.sin_addr);
-	std::cout << addr.sin_addr << std::endl;
+	std::cout << "[모든 별명]" << std::endl;
+	for (int i = 0; host->h_aliases[i]; i++)
+		std::cout << host->h_aliases[i] << std::endl;
 
-	for (int i = 0; test->h_aliases[i]; i++)
-		std::cout << test->h_aliases[i] << std::endl;
+	std::cout << std::endl;
 	
+	std::cout << "[모든 IPv4]" << std::endl;
+	for (int i = 0; host->h_addr_list[i]; i++)
+	{
+		char ip[INET_ADDRSTRLEN]{};
+		inet_ntop(host->h_addrtype, host->h_addr_list[i], ip, sizeof(ip));
+		std::cout << ip << std::endl;
+	}
+
+	// 윈속 종료
+	WSACleanup();
 	return 0;
 }
