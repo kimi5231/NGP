@@ -21,7 +21,7 @@ int main(void)
 
 	// listenSocket 생성
 	SOCKET listenSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (listenSocket == SOCKET_ERROR)
+	if (listenSocket == INVALID_SOCKET)
 		return 0;
 
 	// bind
@@ -42,7 +42,7 @@ int main(void)
 	sockaddr_in clientAddr;
 	int addrLen = sizeof(clientAddr);
 	clientSocket = accept(listenSocket, (sockaddr*)&clientAddr, &addrLen);
-	if (clientSocket == SOCKET_ERROR)
+	if (clientSocket == INVALID_SOCKET)
 		return 0;
 
 	// 파일 전체 크기 받기
@@ -75,7 +75,7 @@ int main(void)
 		FillConsoleOutputAttribute(hConsole, csbi.wAttributes, cells, { 0, 0 }, &written);
 		SetConsoleCursorPosition(hConsole, { 0, 0 });
 
-		std::cout << "수신률: " << ((double)fileBuffer.size()/double(fileSize)*100) << "%" << std::endl;
+		std::cout << "수신률: " << (static_cast<double>(fileBuffer.size()) / fileSize) * 100 << "%" << std::endl;
 	}
 
 	// 받은 파일 저장

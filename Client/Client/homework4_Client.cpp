@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 
 	// clientSocket »ý¼º
 	SOCKET clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (clientSocket == SOCKET_ERROR)
+	if (clientSocket == INVALID_SOCKET)
 		return 0;
 
 	// connect
