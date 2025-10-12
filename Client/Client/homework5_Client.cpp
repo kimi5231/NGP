@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+	inet_pton(AF_INET, argv[2], &addr.sin_addr);
 	addr.sin_port = htons(7777);
 	if (connect(clientSocket, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
 		return 0;
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
 	// 가변 데이터 송신
 	send(clientSocket, argv[1], fileNameSize, 0);
 
-	std::vector<char> buffer(512);
+	std::vector<char> buffer(4096);
 
 	while (!file.eof())
 	{
