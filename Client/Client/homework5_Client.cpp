@@ -44,6 +44,14 @@ int main(int argc, char* argv[])
 	// 파일 전체 크기 보내기
 	send(clientSocket, (char*)&fileSize, sizeof(size_t), 0);
 
+	// 파일 이름 보내기
+	// 고정 길이 송신
+	int fileNameSize = strlen(argv[1]);
+	send(clientSocket, (char*)&fileNameSize, sizeof(int), 0);
+
+	// 가변 데이터 송신
+	send(clientSocket, argv[1], fileNameSize, 0);
+
 	std::vector<char> buffer(512);
 
 	while (!file.eof())
