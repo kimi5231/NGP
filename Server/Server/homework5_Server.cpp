@@ -22,8 +22,8 @@ std::vector<DWORD> threadIDs(2);
 HANDLE threadEvent1;
 HANDLE threadEvent2;
 
-int thread1 = 0;
-int thread2 = 0;
+int thread1Rate = 0;
+int thread2Rate = 0;
 
 DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 {
@@ -37,10 +37,10 @@ DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 	// 주소 정보 얻기
 	sockaddr addr;
 	int addrLen = sizeof(addr);
-	getsockname(info->clientSocket, &addr, &addrLen);
+	getpeername(info->clientSocket, &addr, &addrLen);
 	sockaddr_in* addrIn = reinterpret_cast<sockaddr_in*>(&addr);
-	char ipStr[INET_ADDRSTRLEN];
-	inet_ntop(AF_INET, &(addrIn->sin_addr), ipStr, INET_ADDRSTRLEN);
+	char ip[INET_ADDRSTRLEN];
+	inet_ntop(AF_INET, &(addrIn->sin_addr), ip, INET_ADDRSTRLEN);
 
 	// 파일의 모든 바이트를 담아둘 버퍼
 	std::vector<char> fileBuffer{};
@@ -63,6 +63,9 @@ DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 
 		if (GetCurrentThreadId() == threadIDs[0])
 		{
+			// 수신률 기록
+			thread1Rate = (static_cast<double>(fileBuffer.size()) / info->fileSize) * 100;
+
 			WaitForSingleObject(threadEvent1, INFINITE);
 			
 			// 콘솔 다시 그리기
@@ -72,30 +75,27 @@ DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 			FillConsoleOutputAttribute(hConsole, csbi.wAttributes, cells, { 0, 0 }, &written);
 			SetConsoleCursorPosition(hConsole, { 0, 0 });
 
-			// 수신률 기록
-			thread1 = (static_cast<double>(fileBuffer.size()) / info->fileSize) * 100;
-
 			// 출력
 			std::cout << "[" << info->fileName.data() << "]" << std::endl;
-			std::cout << "IP: " << ipStr << std::endl;
-			std::cout << "수신률: " << thread1 << "%" << std::endl;
+			std::cout << "IP: " << ip << std::endl;
+			std::cout << "수신률: " << thread1Rate << "%" << std::endl;
 
-			// 
+			// 2번 쓰레드 깨우기
 			SetEvent(threadEvent2);
 		}
 		else
 		{
 			//
-			thread2 = (static_cast<double>(fileBuffer.size()) / info->fileSize) * 100;
+			thread2Rate = (static_cast<double>(fileBuffer.size()) / info->fileSize) * 100;
 
 			WaitForSingleObject(threadEvent2, INFINITE);
 
 			// 출력
 			std::cout << "[" << info->fileName.data() << "]" << std::endl;
-			std::cout << "IP: " << ipStr << std::endl;
-			std::cout << "수신률: " << thread2 << "%" << std::endl;
+			std::cout << "IP: " << ip << std::endl;
+			std::cout << "수신률: " << thread2Rate << "%" << std::endl;
 
-			//
+			// 1번 쓰레드 깨우기
 			SetEvent(threadEvent1);
 		}
 	}
@@ -108,12 +108,12 @@ DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 		file.close();
 	}
 
-	while (thread1 != 100 || thread2 != 100)
+	while (thread1Rate != 100 || thread2Rate != 100)
 	{
 		if (GetCurrentThreadId() == threadIDs[0])
 		{
 			WaitForSingleObject(threadEvent1, INFINITE);
-			if (thread1 != 100 || thread2 != 100)
+			if (thread1Rate != 100 || thread2Rate != 100)
 			{
 				// 콘솔 다시 그리기
 				GetConsoleScreenBufferInfo(hConsole, &csbi);
@@ -124,8 +124,8 @@ DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 
 				// 출력
 				std::cout << "[" << info->fileName.data() << "]" << std::endl;
-				std::cout << "IP: " << ipStr << std::endl;
-				std::cout << "수신률: " << thread1 << "%" << std::endl;
+				std::cout << "IP: " << ip << std::endl;
+				std::cout << "수신률: " << thread1Rate << "%" << std::endl;
 			}
 			SetEvent(threadEvent2);
 		}
@@ -135,8 +135,8 @@ DWORD WINAPI ProcessClinet(LPVOID clientInfo)
 
 			// 출력
 			std::cout << "[" << info->fileName.data() << "]" << std::endl;
-			std::cout << "IP: " << ipStr << std::endl;
-			std::cout << "수신률: " << thread2 << "%" << std::endl;
+			std::cout << "IP: " << ip << std::endl;
+			std::cout << "수신률: " << thread2Rate << "%" << std::endl;
 		
 			SetEvent(threadEvent1);
 		}
