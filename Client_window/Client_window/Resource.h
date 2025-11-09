@@ -26,6 +26,7 @@
 
 #define IDB_SELECT 3001
 #define IDB_INPUT 3002
+#define IDB_CANCEL 3003
 
 
 #endif

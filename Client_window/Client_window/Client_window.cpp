@@ -1,7 +1,5 @@
 ﻿#define _CRT_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
-#include <stdio.h>
-
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -11,25 +9,20 @@
 #include <commctrl.h>
 #include "resource.h"
 #include <shlwapi.h>
+
 #pragma comment(lib, "Shlwapi.lib")
-
-
 #pragma comment(lib, "Ws2_32.lib")
 
 
 // 대화상자 프로시저
 INT_PTR CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
 
-// 소켓 통신 스레드 함수
-DWORD WINAPI ClientMain(LPVOID arg);
-
-HANDLE hReadEvent, hWriteEvent; // 이벤트
-
 HWND hIp;
 HWND hLabel;
 HWND hProgress;
 HWND hSelectButton;
 HWND hInputButton;
+HWND hCancelButton;
 
 OPENFILENAME ofn;
 TCHAR path[MAX_PATH];
@@ -85,11 +78,15 @@ DWORD WINAPI ClientMain(LPVOID arg)
 
 	std::vector<char> buffer(4096);
 
+	SendMessage(hProgress, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
+
+	int totalReadByte = 0;
 	while (!file.eof())
 	{
 		file.read(buffer.data(), buffer.size());
 		// 실제로 읽은 바이트 수 확인
 		std::streamsize readByte = file.gcount();
+		totalReadByte += readByte;
 
 		// 고정 길이 송신
 		int len = static_cast<int>(readByte);
@@ -97,12 +94,16 @@ DWORD WINAPI ClientMain(LPVOID arg)
 
 		// 가변 데이터 송신
 		send(clientSocket, buffer.data(), len, 0);
+
+		SendMessage(hProgress, PBM_SETPOS, (static_cast<double>(totalReadByte)/fileSize)*100, 0);
 	}
 
-	std::cout << "전송 완료" << std::endl;
+	//SetDlgItemText(hDlg, IDC_LABEL, L"전송 완료");
 
 	// 파일 닫기
 	file.close();
+
+
 
 	// 소켓 닫기
 	closesocket(clientSocket);
@@ -114,19 +115,8 @@ DWORD WINAPI ClientMain(LPVOID arg)
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	// 이벤트 생성
-	hReadEvent = CreateEvent(NULL, FALSE, TRUE, NULL);
-	hWriteEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-	// 소켓 통신 스레드 생성
-	
-
 	// 대화상자 생성
 	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG), NULL, DlgProc);
-
-	// 이벤트 제거
-	CloseHandle(hReadEvent);
-	CloseHandle(hWriteEvent);
 
 	return 0;
 }
@@ -142,6 +132,7 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		hProgress = GetDlgItem(hDlg, IDC_PROGRESS);
 		hInputButton = GetDlgItem(hDlg, IDB_INPUT);
 		hSelectButton = GetDlgItem(hDlg, IDB_SELECT);
+		hCancelButton = GetDlgItem(hDlg, IDCANCEL);
 		return TRUE;
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) 
@@ -155,8 +146,6 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			return true;
 		case IDB_SELECT:
 			{
-				
-				
 				ZeroMemory(&ofn, sizeof(ofn));
 				ofn.lStructSize = sizeof(ofn);
 				ofn.lpstrFile = path;
@@ -170,7 +159,11 @@ INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 					WideCharToMultiByte(CP_ACP, 0, PathFindFileName(ofn.lpstrFile), -1, fileName, sizeof(fileName), NULL, NULL);
 					
 				}
+				
 			}
+			return true;
+		case IDB_CANCEL:
+			EndDialog(hDlg, true);
 			return true;
 		}
 		return FALSE;
