@@ -20,13 +20,11 @@
 
 #define IDD_DIALOG 1001
 
-#define IDC_IPADDRESS 2001
-#define IDC_LABEL 2002
-#define IDC_PROGRESS 2003
+#define IDC_LABEL 2001
+#define IDC_PROGRESS 2002
 
 #define IDB_SELECT 3001
-#define IDB_INPUT 3002
-#define IDB_CANCEL 3003
+#define IDB_CANCEL 3002
 
 
 #endif

@@ -7,15 +7,11 @@
 #include <ws2tcpip.h>
 #include <windows.h>
 #include <commctrl.h>
-#include "resource.h"
 #include <shlwapi.h>
+#include "resource.h"
 
-#pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "Ws2_32.lib")
-
-
-// 대화상자 프로시저
-INT_PTR CALLBACK DlgProc(HWND, UINT, WPARAM, LPARAM);
+#pragma comment(lib, "Shlwapi.lib")
 
 HWND hIp;
 HWND hLabel;
@@ -24,14 +20,10 @@ HWND hSelectButton;
 HWND hInputButton;
 HWND hCancelButton;
 
-OPENFILENAME ofn;
+OPENFILENAME fileDlg;
 TCHAR path[MAX_PATH];
-char fileName[50];
 
-DWORD Ip;
-char* Ip2;
-
-DWORD WINAPI ClientMain(LPVOID arg)
+DWORD WINAPI ProcessNetwork(LPVOID arg)
 {
 	// 윈속 초기화
 	WSADATA wsa;
@@ -47,7 +39,7 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	sockaddr_in addr;
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
-	inet_pton(AF_INET, Ip2, &addr.sin_addr);
+	inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
 	addr.sin_port = htons(7777);
 	if (connect(clientSocket, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR)
 		return 0;
@@ -70,17 +62,16 @@ DWORD WINAPI ClientMain(LPVOID arg)
 
 	// 파일 이름 보내기
 	// 고정 길이 송신
+	char fileName[50];
+	WideCharToMultiByte(CP_ACP, 0, PathFindFileName(path), -1, fileName, sizeof(fileName), NULL, NULL);
 	int fileNameSize = strlen(fileName);
 	send(clientSocket, (char*)&fileNameSize, sizeof(int), 0);
 
 	// 가변 데이터 송신
 	send(clientSocket, fileName, fileNameSize, 0);
 
-	std::vector<char> buffer(4096);
-
-	SendMessage(hProgress, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
-
 	int totalReadByte = 0;
+	std::vector<char> buffer(4096);
 	while (!file.eof())
 	{
 		file.read(buffer.data(), buffer.size());
@@ -95,15 +86,12 @@ DWORD WINAPI ClientMain(LPVOID arg)
 		// 가변 데이터 송신
 		send(clientSocket, buffer.data(), len, 0);
 
+		// Procress Bar Udate
 		SendMessage(hProgress, PBM_SETPOS, (static_cast<double>(totalReadByte)/fileSize)*100, 0);
 	}
 
-	//SetDlgItemText(hDlg, IDC_LABEL, L"전송 완료");
-
 	// 파일 닫기
 	file.close();
-
-
 
 	// 소켓 닫기
 	closesocket(clientSocket);
@@ -113,60 +101,52 @@ DWORD WINAPI ClientMain(LPVOID arg)
 	return 0;
 }
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
-{
-	// 대화상자 생성
-	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG), NULL, DlgProc);
-
-	return 0;
-}
-
-// 대화상자 프로시저
 INT_PTR CALLBACK DlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-	switch (uMsg) 
+	switch (uMsg)
 	{
 	case WM_INITDIALOG:
-		hIp = GetDlgItem(hDlg, IDC_IPADDRESS);
 		hLabel = GetDlgItem(hDlg, IDC_LABEL);
 		hProgress = GetDlgItem(hDlg, IDC_PROGRESS);
-		hInputButton = GetDlgItem(hDlg, IDB_INPUT);
 		hSelectButton = GetDlgItem(hDlg, IDB_SELECT);
 		hCancelButton = GetDlgItem(hDlg, IDCANCEL);
 		return TRUE;
 	case WM_COMMAND:
-		switch (LOWORD(wParam)) 
+		switch (LOWORD(wParam))
 		{
-		case IDB_INPUT:
-			SendMessage(hIp, IPM_GETADDRESS, 0, (LPARAM)&Ip);
-			in_addr addr;
-			addr.S_un.S_addr = htonl(Ip);
-			Ip2 = inet_ntoa(addr);
-			CreateThread(NULL, 0, ClientMain, NULL, 0, NULL);
-			return true;
 		case IDB_SELECT:
-			{
-				ZeroMemory(&ofn, sizeof(ofn));
-				ofn.lStructSize = sizeof(ofn);
-				ofn.lpstrFile = path;
-				ofn.nMaxFile = MAX_PATH;
-				ofn.lpstrFilter = L"모든 파일\0*.*\0";
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+			ZeroMemory(&fileDlg, sizeof(fileDlg));
+			fileDlg.lStructSize = sizeof(fileDlg);
+			fileDlg.lpstrFile = path;
+			fileDlg.nMaxFile = MAX_PATH;
+			fileDlg.lpstrFilter = L"모든 파일\0*.*\0";
+			fileDlg.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+			
+			if (GetOpenFileName(&fileDlg))
+				SetDlgItemText(hDlg, IDC_LABEL, path);
 
-				if (GetOpenFileName(&ofn))
-				{
-					SetDlgItemText(hDlg, IDC_LABEL, ofn.lpstrFile);
-					WideCharToMultiByte(CP_ACP, 0, PathFindFileName(ofn.lpstrFile), -1, fileName, sizeof(fileName), NULL, NULL);
-					
-				}
-				
-			}
-			return true;
+			// Thread 생성
+			CreateThread(NULL, 0, ProcessNetwork, NULL, 0, NULL);
+
+			// Select Button 비활성화
+			EnableWindow(hSelectButton, FALSE);
+			return TRUE;
 		case IDB_CANCEL:
-			EndDialog(hDlg, true);
-			return true;
+			EndDialog(hDlg, IDB_CANCEL);
+			return TRUE;
 		}
 		return FALSE;
 	}
 	return FALSE;
+}
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+	// DialogBox 생성
+	DialogBox(hInstance, MAKEINTRESOURCE(IDD_DIALOG), NULL, DlgProc);
+
+	// Progress Bar 설정
+	SendMessage(hProgress, PBM_SETRANGE, 0, MAKELPARAM(0, 100));
+
+	return 0;
 }
